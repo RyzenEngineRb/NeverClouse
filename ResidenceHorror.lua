@@ -1,23 +1,30 @@
 -- Не удивляйтесь что нашли опен сурс скрипта, мои проекты изночально были опен сурс а ключ система сделана для поддержки и мотивации, дабы скрипты почаще обновлялись и я о них не забывал(:
 
-local URL = "https://raw.githubusercontent.com/RyzenEngineRb/UnflyProject/refs/heads/main/UnflyUi.lua"
-local LOCAL_FILE = "UnflyUi.lua"
-
-local function fetchUi()
-	local ok, src = pcall(function() return game:HttpGet(URL) end)
-	if ok and type(src) == "string" and #src > 100 then return src end
-	if isfile and readfile and isfile(LOCAL_FILE) then
-		local ok2, src2 = pcall(readfile, LOCAL_FILE)
-		if ok2 and type(src2) == "string" and #src2 > 100 then return src2 end
+do
+	local g = (getgenv and getgenv()) or _G
+	local MSG = "похоже вы не получили ключ):\nзапустите через UnflyLoader → UnflyLauncher."
+	local passed = false
+	local function unflyCheck()
+		if passed then return true end
+		if g.__unfly_ok and g.__unfly_from_launcher and g.__unfly_key and tostring(g.__unfly_key) ~= "" then
+			local t = tonumber(g.__unfly_session)
+			if t and (os.time() - t) > (12 * 3600) then
+			else
+				passed = true
+				return true
+			end
+		end
+		warn(MSG)
+		pcall(function()
+			game:GetService("Players").LocalPlayer:Kick(MSG)
+		end)
+		error(MSG, 0)
 	end
-	error("UnflyUi not found")
+	g.__unfly_check = unflyCheck
+	unflyCheck()
 end
 
-local ok, Library = pcall(function() return loadstring(fetchUi())() end)
-if not ok or type(Library) ~= "table" then
-	warn("[ResidenceHorror] UnflyUi load failed: " .. tostring(Library))
-	return
-end
+
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -26,12 +33,13 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local LP = Players.LocalPlayer
 
--- Residence / horror places (один скрипт на все эти миры)
 local ALLOWED_PLACES = {
 	[14437001043] = true,
 	[14896802601] = true,
 	[16667550979] = true,
 	[140260816701736] = true,
+	[14908286297] = true,
+	[124095328182831] = true,
 }
 
 local function isAllowedPlace()
@@ -103,6 +111,7 @@ local function isPlayerChar(m)
 end
 
 local function isMutant(name)
+pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 	local n = string.lower(tostring(name or ""))
 	for _, mn in ipairs(MUTANT_NAMES) do
 		if string.find(n, string.lower(mn), 1, true) then return true end
@@ -172,10 +181,8 @@ local function protectCold()
 	end
 end
 
--- WalkSpeed / JumpPower Humanoid не пишем — Residence детектит сразу
-
 local patchedRemotes = {}
--- Не патчим FireServer через rawset — тоже ловится детекторами instance newindex
+
 local function scanAntiCheatRemotes()
 	local n = 0
 	for _, obj in ipairs(game:GetDescendants()) do
@@ -205,6 +212,7 @@ local function ensureRoot()
 	ROOT_FOLDER.Parent = host
 	return ROOT_FOLDER
 end
+pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 
 local espFolder, espMap = nil, {}
 
@@ -352,6 +360,7 @@ local function destroyChinaHat()
 		pcall(function() chinaHatConn:Disconnect() end)
 		chinaHatConn = nil
 	end
+	pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 	if chinaHatPart then
 		pcall(function() chinaHatPart:Destroy() end)
 		chinaHatPart = nil
@@ -374,7 +383,6 @@ local function createChinaHat(character)
 	local head = character:FindFirstChild("Head")
 	if not head then return end
 
-	-- НЕ в Character — только Workspace-folder + CFrame follow (без Weld)
 	local Cone = Instance.new("Part")
 	Cone.Name = "HubChinaHat"
 	Cone.Size = Vector3.new(1, 1, 1)
@@ -486,6 +494,7 @@ local function destroyLocalLight()
 		pcall(function() localLightConn:Disconnect() end)
 		localLightConn = nil
 	end
+	pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 	if localLightPart then
 		pcall(function() localLightPart:Destroy() end)
 		localLightPart = nil
@@ -541,8 +550,6 @@ local function createLocalLight()
 	end)
 end
 
-
--- Полёт без BodyVelocity / без анимаций / без new Instance на персонаже
 local keysDown = {}
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
@@ -556,7 +563,6 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
--- TP-fly: короткие CFrame-сдвиги, без BodyVelocity / AssemblyLinearVelocity
 local flyAccum = 0
 local function flyStep(dt)
 	if not State.Fly then return end
@@ -579,7 +585,6 @@ local function flyStep(dt)
 	if keysDown[Enum.KeyCode.Space] or keysDown[Enum.KeyCode.E] then move = move + Vector3.yAxis end
 	if keysDown[Enum.KeyCode.LeftControl] or keysDown[Enum.KeyCode.Q] then move = move - Vector3.yAxis end
 
-	-- гасим физику, чтобы не тянуло вниз
 	pcall(function()
 		hrp.AssemblyLinearVelocity = Vector3.zero
 		hrp.AssemblyAngularVelocity = Vector3.zero
@@ -588,7 +593,6 @@ local function flyStep(dt)
 	if move.Magnitude < 0.05 then return end
 	move = move.Unit
 
-	-- дробим сдвиг на маленькие TP (меньше шансов у anti-pos)
 	local maxStep = State.SafeMode and 6 or 10
 	local step = math.clamp(State.FlySpeed * dt, 0.4, maxStep)
 	local target = hrp.Position + move * step
@@ -598,7 +602,7 @@ local function flyStep(dt)
 
 	if hum then
 		pcall(function()
-			-- не трогаем PlatformStand каждый кадр — реже
+
 			flyAccum = flyAccum + dt
 			if flyAccum > 0.4 then
 				flyAccum = 0
@@ -635,7 +639,7 @@ local function startFreeCam()
 		FOV = cam.FieldOfView,
 	}
 	State.FreeCam = true
-	-- Scriptable только пока включено; при выключении возвращаем как было
+
 	pcall(function() cam.CameraType = Enum.CameraType.Scriptable end)
 
 	local yaw, pitch = 0, 0
@@ -667,6 +671,7 @@ local function startFreeCam()
 		if move.Magnitude > 0 then
 			pos = pos + move.Unit * State.FreeCamSpeed * dt
 		end
+		pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 		cam2.CFrame = CFrame.new(pos) * rot
 		if State.FOV then
 			cam2.FieldOfView = State.FOVValue
@@ -690,11 +695,11 @@ end
 local espAcc = 0
 
 RunService.Heartbeat:Connect(function(dt)
+	pcall(function() local m=(getgenv and getgenv() or _G).__unfly_mark if m then m("loop") end end)
 	local c = getChar()
 	if not c then return end
 	local hum = c:FindFirstChildOfClass("Humanoid")
 
-	-- реже трогаем Value (меньше шанс value-watch AC)
 	if (tick() * 3) % 1 < 0.4 then
 		if State.InfStamina then
 			local stam = findVal({ "Sprint", "Stam" })
@@ -711,8 +716,6 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 
-	-- WalkSpeed НЕ трогаем: Residence сразу детектит
-	-- Speed Boost = лёгкий CFrame-буст только при реальном движении WASD
 	if State.Speed and not State.SafeMode then
 		local hrp = c:FindFirstChild("HumanoidRootPart")
 		if hrp and hum and hum.MoveDirection.Magnitude > 0.15 then
@@ -724,12 +727,11 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 		end
 	elseif State.Speed and State.SafeMode then
-		-- SafeMode: без CFrame-буста (только Fly для перемещения)
+
 	end
 
-	-- JumpPower тоже часто мониторят — не пишем каждый тик
 	if State.JumpPower and hum then
-		-- только через JumpRequest / ChangeState, значение Humanoid не меняем
+
 	end
 
 	if State.Noclip and (tick() * 4) % 1 < 0.35 then
@@ -747,7 +749,7 @@ RunService.Heartbeat:Connect(function(dt)
 
 	if State.Fly then
 		flyStep(dt)
-		-- noclip только HRP+части, не каждый кадр
+
 		if (tick() * 5) % 1 < 0.25 then
 			for _, part in ipairs(c:GetChildren()) do
 				if part:IsA("BasePart") then
@@ -765,6 +767,7 @@ RunService.Heartbeat:Connect(function(dt)
 end)
 
 LP.CharacterAdded:Connect(function()
+pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 	task.wait(0.6)
 	destroyChinaHat()
 	if auraHL then pcall(function() auraHL:Destroy() end) auraHL = nil end
@@ -827,7 +830,8 @@ secS:AddButton({
 		for _, v in ipairs(list) do
 			names[#names + 1] = v:GetFullName() .. " = " .. tostring(v.Value)
 		end
-		Library:Notify({
+		pcall(function() local m=(getgenv and getgenv() or _G).__unfly_mark if m then m("ui") m("feature") end end)
+Library:Notify({
 			Title = "Cold Protect",
 			Content = (#names > 0) and table.concat(names, "\n") or "No cold/temp values found",
 			Duration = 5,
@@ -1023,7 +1027,6 @@ secC:AddSlider({
 		State.LightBright = tonumber(v) or 2
 	end,
 })
-
 
 local secD = DebugTab:AddSection({ Name = "Anti Cheat", Icon = "shield", Position = "left" })
 secD:AddButton({

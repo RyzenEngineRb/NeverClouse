@@ -1,5 +1,31 @@
 -- Не удивляйтесь что нашли опен сурс скрипта, мои проекты изночально были опен сурс а ключ система сделана для поддержки и мотивации, дабы скрипты почаще обновлялись и я о них не забывал(:
 
+do
+	local g = (getgenv and getgenv()) or _G
+	local MSG = "похоже вы не получили ключ):\nзапустите через UnflyLoader → UnflyLauncher."
+	local passed = false
+	local function unflyCheck()
+		if passed then return true end
+		if g.__unfly_ok and g.__unfly_from_launcher and g.__unfly_key and tostring(g.__unfly_key) ~= "" then
+			local t = tonumber(g.__unfly_session)
+			if t and (os.time() - t) > (12 * 3600) then
+			else
+				passed = true
+				return true
+			end
+		end
+		warn(MSG)
+		pcall(function()
+			game:GetService("Players").LocalPlayer:Kick(MSG)
+		end)
+		error(MSG, 0)
+	end
+	g.__unfly_check = unflyCheck
+	unflyCheck()
+end
+
+
+
 if workspace.DistributedGameTime < 4 then
 	task.wait(4 - workspace.DistributedGameTime)
 end
@@ -80,7 +106,6 @@ OverriddenAnimations,AllAnimations,Values = {},{["Default Roblox"] = {["Idle"] =
 local ModulesOptions,LastTrack,NoliConfig,GetAnimationType,LastAnimOriginalUsed,UpdateAnim,CanPlayOverrideAnim,CurrentQTEAzure,TeleportSound,GetFunction
 ColorPresets = {["White"] = Color3.fromRGB(255,255,255),["Teal"] = Color3.fromRGB(3,252,157),["Green"] = Color3.fromRGB(0,255,0),["Light Green"] = Color3.fromRGB(191, 255, 191),["Purple"] = Color3.fromRGB(158, 0, 179),["Red"] = Color3.fromRGB(255,0,0),["Blue"] = Color3.fromRGB(0,0,255),["Cyan"] = Color3.fromRGB(0,255,255),["Gold"] = Color3.fromRGB(255,215,0),["Orange"] = Color3.fromRGB(255,135,15)}
 
-
 UnflyFsStamina = {
 	infinite = false,
 	max = 100,
@@ -99,6 +124,7 @@ local function UnflyFsGetSprint()
 end
 
 local function UnflyFsApplyStamina()
+	pcall(function() local m=(getgenv and getgenv() or _G).__unfly_mark if m then m("loop") end end)
 	local mod = UnflyFsGetSprint()
 	if not mod or not mod.DefaultsSet then return end
 	pcall(function()
@@ -552,6 +578,7 @@ local FeatureLoadout; FeatureLoadout = {
                         return Solution
                     end
                 end
+                pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
                 return nil
             end,
             ["BuildConnectSolution"] = function(self,Blobs)
@@ -1269,6 +1296,7 @@ local FeatureLoadout; FeatureLoadout = {
                     end
                 end)
             end
+            pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
         },
         ["GeneratorCooldown"] = {
             ["DisplayDescription"] = "The cooldown in seconds before completing a generator",
@@ -2063,6 +2091,7 @@ local FeatureLoadout; FeatureLoadout = {
                 if not Value or not SpeedMultipliers then
                     return
                 end
+                pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
                 for i,Child in SpeedMultipliers:GetChildren() do
                     self:Check(Child)
                 end
@@ -2859,6 +2888,7 @@ local FeatureLoadout; FeatureLoadout = {
                                     Matches = false
                                     break
                                 end
+                                pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
                             end
                             if Matches then
                                 Level = Number
@@ -3842,6 +3872,7 @@ local FeatureLoadout; FeatureLoadout = {
                     if Child.Name == "HealthDesaturation" then
                         Child.Enabled = not GetValue("HideInjury")
                     end
+                    pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
                 end)
                 if Lighting:FindFirstChild("HealthDesaturation") then
                     Lighting.HealthDesaturation.Enabled = not GetValue("HideInjury")
@@ -4745,6 +4776,7 @@ if FeatureLoadout["EnviromentFunctions"]["getgc"]["DefaultInstanceValue"] then
                 end
             end
         end
+        pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
     end)
 end
 
@@ -5579,6 +5611,7 @@ local function SetupSettingUI(SettingInstance, TabSectionFolder,TableFeature)
                     local BindableCallCheckRequirement = Instance.new("BindableEvent")
                     local Requirements = {}
                     BindableCallCheckRequirement.Event:Connect(function()
+                    pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
                         local AllTrue = true                            
                         for i,v in pairs(Requirements) do
                             if not v then
@@ -5772,6 +5805,7 @@ local function SetupSettingUI(SettingInstance, TabSectionFolder,TableFeature)
     end
 
 local function HandleUIFeatures(TabName,TabContents)
+    pcall(function() local m=(getgenv and getgenv() or _G).__unfly_mark if m then m("feature") end end)
     local Folder = Instance.new("Folder")
     Folder.Name = TabName
     Folder.Parent = UnflyFsFolderSettings
@@ -6368,14 +6402,9 @@ task.spawn(function()
 		})
 	end
 
-	Library:Notify({ Title = "UnflyFs", Content = "Loaded", Duration = 3 })
+	pcall(function() local m=(getgenv and getgenv() or _G).__unfly_mark if m then m("ui") m("feature") end end)
+Library:Notify({ Title = "UnflyFs", Content = "Loaded", Duration = 3 })
 end)
-
-
-
-
-
-
 
     task.spawn(function()
         if game.GameId == 6331902150 then
@@ -6456,6 +6485,7 @@ if UnflyFsSideButton:IsA("Frame") then
                             ["_sidebar"] = MenuData
                         }
                     end
+                    pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
                 end
             end
         end
@@ -6738,8 +6768,6 @@ UICheck()
 SideBar.Visible = true
 task.spawn(ActionOnCharacter,LocalCharacter or LocalPlayer.Character)
 
-
-
 task.defer(function()
 	task.wait(2)
 	pcall(function()
@@ -6765,4 +6793,4 @@ task.defer(function()
 		end
 	end)
 end)
--- unflyfs_ui_removed
+

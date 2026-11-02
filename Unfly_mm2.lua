@@ -1,4 +1,27 @@
--- Не удивляйтесь что нашли опен сурс скрипта, мои проекты изночально были опен сурс а ключ система сделана для поддержки и мотивации, дабы скрипты почаще обновлялись и я о них не забывал
+-- Не удивляйтесь что нашли опен сурс скрипта, мои проекты изночально были опен сурс а ключ система сделана для поддержки и мотивации, дабы скрипты почаще обновлялись и я о них не забывал(:
+
+do
+	local g = (getgenv and getgenv()) or _G
+	local MSG = "похоже вы не получили ключ):\nзапустите через UnflyLoader → UnflyLauncher."
+	local passed = false
+	local function unflyCheck()
+		if passed then return true end
+		if g.__unfly_ok and g.__unfly_from_launcher and g.__unfly_key and tostring(g.__unfly_key) ~= "" then
+			local t = tonumber(g.__unfly_session)
+			if not t or (os.time() - t) <= (12 * 3600) then
+				passed = true
+				return true
+			end
+		end
+		warn(MSG)
+		pcall(function()
+			game:GetService("Players").LocalPlayer:Kick(MSG)
+		end)
+		error(MSG, 0)
+	end
+	g.__unfly_check = unflyCheck
+	unflyCheck()
+end
 
 local URL = "https://raw.githubusercontent.com/RyzenEngineRb/UnflyProject/refs/heads/main/UnflyUi.lua"
 local LOCAL_FILE = "UnflyUi.lua"
@@ -832,6 +855,7 @@ do
 			if trust > 0 and air then
 				base = Vector3.new(base.X, base.Y, base.Z):Lerp(Vector3.new(base.X, live.Y, base.Z), trust * 0.35)
 			end
+			pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 		end
 		return base, turn, instant or stable, trust
 	end
@@ -2032,6 +2056,7 @@ RunService.Heartbeat:Connect(function()
                 hrp.AssemblyLinearVelocity = Vector3.new(dir.X * speed, v.Y, dir.Z * speed)
             end
         end
+        pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 
         if not airborne then
             is_boosting = false
@@ -3172,6 +3197,7 @@ RunService.RenderStepped:Connect(function()
     if not ok then
 
     end
+    pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 end)
 
 Players.PlayerRemoving:Connect(function(plr)
@@ -5295,6 +5321,7 @@ do
                     part.Transparency = c.tr
                 end)
             end
+            pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
             cache[part] = nil
         end
         if type(table.clear) == "function" then
@@ -6507,6 +6534,7 @@ pcall(function()
         if f.Magnitude > 0 then return f.Unit end
         return Vector3.new(0, 0, 0)
     end
+    pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 
     local function hop_wall(hrp, hum)
         local cam = Workspace.CurrentCamera
@@ -7684,6 +7712,7 @@ pcall(function()
             if anti_aim[i] == do_fake_position then
                 remove_from(anti_aim, i)
             end
+            pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
         end
 
         set_local_body_transparency(fake_pos_active)
@@ -8829,6 +8858,7 @@ task.defer(function()
 					pcall(function() conn:Disconnect() end)
 					conn = nil
 				end
+				pcall(function() local g=(getgenv and getgenv() or _G) if g.__unfly_check then g.__unfly_check() end end)
 				if gui then
 					pcall(function() gui:Destroy() end)
 					gui = nil
