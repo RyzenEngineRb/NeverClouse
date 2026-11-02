@@ -1,3 +1,5 @@
+-- Не удивляйтесь что нашли опен сурс скрипта, мои проекты изночально были опен сурс а ключ система сделана для поддержки и мотивации, дабы скрипты почаще обновлялись и я о них не забывал(:
+
 local URL = "https://raw.githubusercontent.com/RyzenEngineRb/UnflyProject/refs/heads/main/UnflyUi.lua"
 local LOCAL_FILE = "UnflyUi.lua"
 
