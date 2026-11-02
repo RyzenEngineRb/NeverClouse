@@ -1,4 +1,3 @@
--- UnflyFs | UnflyUi frontend for Forsaken feature core
 if workspace.DistributedGameTime < 4 then
 	task.wait(4 - workspace.DistributedGameTime)
 end
