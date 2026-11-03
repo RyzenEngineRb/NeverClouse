@@ -2241,111 +2241,99 @@ local function fling_role(role)
 end
 
 local function do_fling(tp)
-    if not tp or not tp.Character then return end
+    if not tp or not tp.Character then
+        return
+    end
     local hrp = fling_hrp()
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not char then return end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not hrp then
+        return
+    end
     local tc = tp.Character
     local thrp = tc:FindFirstChild("HumanoidRootPart") or tc:FindFirstChild("Head")
     local th = tc:FindFirstChildOfClass("Humanoid")
-    if not thrp then return end
-    if th and th.Sit then return end
-
+    if not thrp then
+        return
+    end
     getgenv().FLING_ACTIVE = (getgenv().FLING_ACTIVE or 0) + 1
     if hrp.AssemblyLinearVelocity.Magnitude < 50 then
         getgenv().OldPos = hrp.CFrame
     end
-
+    if th and th.Sit then
+        getgenv().FLING_ACTIVE = math.max(0, (getgenv().FLING_ACTIVE or 1) - 1)
+        return
+    end
     local camera = Workspace.CurrentCamera
     local old_fdh = Workspace.FallenPartsDestroyHeight
-    local old_subject = camera and camera.CameraSubject
-    local old_platform = nil
-    pcall(function() old_platform = hum.PlatformStand end)
-    pcall(function() Workspace.FallenPartsDestroyHeight = 0 / 0 end)
-    pcall(function() if hum then hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false) end end)
-    pcall(function() if camera then camera.CameraSubject = th or thrp end end)
-
-    local parts = {}
-    for _, part in ipairs(tc:GetDescendants()) do
-        if part:IsA("BasePart") then
-            table.insert(parts, {part, part.CanCollide})
-            pcall(function() part.CanCollide = false end)
-        end
+    if thrp then
+        camera.CameraSubject = thrp
+    elseif th then
+        camera.CameraSubject = th
     end
-
-    local ping = 0.08
-    pcall(function() ping = LocalPlayer:GetNetworkPing() end)
-    local lead = math.clamp(0.16 + ping * 2 + 0.05, 0.15, 0.6)
-    local duration = 1.15
-    local moveMag = 0
-    pcall(function() moveMag = th.MoveDirection.Magnitude * th.WalkSpeed end)
-    local vel = thrp.AssemblyLinearVelocity
-    if vel.Magnitude > 1500 then vel = Vector3.zero end
-    if moveMag > 2 or Vector3.new(vel.X, 0, vel.Z).Magnitude > 3 then
-        duration = math.max(duration, 1.25)
-    end
-
+    pcall(function()
+        Workspace.FallenPartsDestroyHeight = 0 / 0
+    end)
     local bv = Instance.new("BodyVelocity")
-    bv.Velocity = Vector3.zero
-    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     bv.Parent = hrp
-
-    local start = os.clock()
-    local ang = 0
-    while os.clock() - start < duration do
-        if not thrp.Parent or not hrp.Parent then break end
-        local predict = thrp.Position + vel * lead
-        pcall(function()
-            if th and th.MoveDirection.Magnitude > 0.1 then
-                predict = predict + th.MoveDirection.Unit * math.min(th.WalkSpeed, 24) * lead * 0.35
-            end
-        end)
-        ang = ang + 120
-        pcall(function()
-            hrp.CFrame = CFrame.new(predict + Vector3.new(0, 1.2, 0)) * CFrame.Angles(math.rad(ang), math.rad(ang * 0.5), 0)
-            hrp.AssemblyLinearVelocity = Vector3.new(9e7, 9e7 * 8, 9e7)
-            hrp.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
-        end)
-        RunService.Heartbeat:Wait()
-        pcall(function()
-            hrp.CFrame = CFrame.new(predict + Vector3.new(0, -1.2, 0)) * CFrame.Angles(math.rad(-ang), 0, math.rad(ang))
-            hrp.AssemblyLinearVelocity = Vector3.new(9e7, 9e7 * 8, 9e7)
-            hrp.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
-        end)
-        RunService.Heartbeat:Wait()
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    local se = hum and hum:GetStateEnabled(Enum.HumanoidStateType.Seated)
+    if hum then
+        hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
     end
-
-    if bv then pcall(function() bv:Destroy() end) end
-    for _, entry in ipairs(parts) do
-        local part, col = entry[1], entry[2]
-        if part and part.Parent then pcall(function() part.CanCollide = col end) end
+    local tw = 2
+    local tm = tick()
+    local ang = 0
+    repeat
+        if hrp and th and thrp and thrp.Parent then
+            ang = ang + 100
+            pcall(function()
+                hrp.CFrame = CFrame.new(thrp.Position) * CFrame.new(0, 1.5, 0) * CFrame.Angles(math.rad(ang), 0, 0)
+                hrp.AssemblyLinearVelocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+                hrp.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
+            end)
+            task.wait()
+            pcall(function()
+                hrp.CFrame = CFrame.new(thrp.Position) * CFrame.new(0, -1.5, 0) * CFrame.Angles(math.rad(ang), 0, 0)
+                hrp.AssemblyLinearVelocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+                hrp.AssemblyAngularVelocity = Vector3.new(9e8, 9e8, 9e8)
+            end)
+            task.wait()
+        else
+            break
+        end
+    until tm + tw < tick()
+    if bv then
+        bv:Destroy()
+    end
+    if hum and se ~= nil then
+        hum:SetStateEnabled(Enum.HumanoidStateType.Seated, se)
     end
     if hum then
-        pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true) end)
-        if old_platform ~= nil then pcall(function() hum.PlatformStand = old_platform end) end
+        camera.CameraSubject = hum
     end
-    if camera and old_subject then pcall(function() camera.CameraSubject = old_subject end)
-    elseif hum then pcall(function() camera.CameraSubject = hum end) end
-
     if getgenv().OldPos then
         local tries = 0
         repeat
             tries = tries + 1
             pcall(function()
                 hrp.CFrame = getgenv().OldPos * CFrame.new(0, 0.5, 0)
-                if hum then hum:ChangeState(Enum.HumanoidStateType.GettingUp) end
-                for _, part in ipairs(char:GetChildren()) do
+                if hum then
+                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                end
+                for _, part in ipairs(LocalPlayer.Character:GetChildren()) do
                     if part:IsA("BasePart") then
-                        part.AssemblyLinearVelocity = Vector3.zero
-                        part.AssemblyAngularVelocity = Vector3.zero
+                        part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                     end
                 end
             end)
             task.wait()
         until tries > 30 or (hrp.Position - getgenv().OldPos.Position).Magnitude < 25
+        pcall(function()
+            Workspace.FallenPartsDestroyHeight = old_fdh
+        end)
     end
-    pcall(function() Workspace.FallenPartsDestroyHeight = old_fdh end)
     getgenv().FLING_ACTIVE = math.max(0, (getgenv().FLING_ACTIVE or 1) - 1)
 end
 
@@ -2406,107 +2394,84 @@ local function refreshPlayerStatus()
     return PlayerStatus
 end
 
-local function findGunDrop()
-    local drop = Workspace:FindFirstChild("GunDrop", true)
-    if drop and drop.Parent then
-        return drop, drop:IsA("BasePart") and drop or drop:FindFirstChildWhichIsA("BasePart") or drop.PrimaryPart
-    end
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        if obj:IsA("Tool") and (obj.Name == "Gun" or obj:FindFirstChild("Shoot")) then
-            local plr = Players:GetPlayerFromCharacter(obj.Parent)
-            if not plr then
-                local part = obj:FindFirstChild("Handle") or obj:FindFirstChildWhichIsA("BasePart")
-                if part then return obj, part end
-            end
-        end
-    end
-    return nil, nil
-end
-
-local function fireTouch(a, b)
-    if not a or not b then return end
-    if not firetouchinterest then return end
-    pcall(function()
-        firetouchinterest(a, b, 0)
-        firetouchinterest(a, b, 1)
-    end)
-end
-
-local function touchGunDrop(object, part, full)
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root or not part or not part.Parent then return false end
-    fireTouch(root, part)
-    if full and char then
-        for _, child in ipairs(char:GetChildren()) do
-            if child:IsA("BasePart") and child ~= root then
-                fireTouch(child, part)
-            end
-        end
-        if object and object ~= part then
-            for _, child in ipairs(object:GetDescendants()) do
-                if child:IsA("BasePart") and child ~= part then
-                    fireTouch(root, child)
-                end
-            end
-        end
-    end
-    return true
-end
-
-local GrabGunDistance = 1000
-local AutoGrabGun = false
-
 local function GrabGun(force)
-    if isGrabbing then return end
-    if hasGun() then return end
     if not force then
         refreshPlayerStatus()
-        if PlayerStatus ~= "Match" then return end
+        if PlayerStatus ~= "Match" then
+            return
+        end
     end
-    isGrabbing = true
-    local started = os.clock()
-    local n, fullT = 0, 0
-    task.spawn(function()
-        while os.clock() - started < 2.2 and not hasGun() do
-            local object, part = findGunDrop()
-            if part then
-                local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                local distOk = true
-                if not force and root and GrabGunDistance < 1000 then
-                    distOk = (root.Position - part.Position).Magnitude <= GrabGunDistance
-                end
-                if distOk then
-                    local now = os.clock()
-                    local full = now - fullT > 0.12
-                    if full then fullT = now end
-                    if touchGunDrop(object, part, full) then
-                        n = n + 1
-                    end
-                end
-            elseif os.clock() - started > 0.3 and not force then
-                break
-            end
-            task.wait()
-        end
-        if hasGun() and SuccessNotify then
-            notify("GrabGun", "Gun grabbed (touch x" .. tostring(n) .. ")")
-        end
-        isGrabbing = false
-    end)
-end
+    if isGrabbing then return end
+    if hasGun() then return end
 
-local function startAutoGrabLoop()
-    task.spawn(function()
-        while true do
-            task.wait(0.15)
-            if AutoGrabGun and not isGrabbing and not hasGun() then
-                pcall(GrabGun, false)
+    isGrabbing = true
+
+    local character = LocalPlayer.Character
+    if not character then
+        isGrabbing = false
+        return
+    end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        isGrabbing = false
+        return
+    end
+
+    local maxAttempts = 90
+    local attempts = 0
+    local originalCFrame = root.CFrame
+
+    local function pullDrop(gunDrop)
+        local target = root.CFrame * CFrame.new(0, 1.2, 0)
+        if gunDrop:IsA("BasePart") then
+            gunDrop.Anchored = false
+            gunDrop.CanCollide = false
+            gunDrop.AssemblyLinearVelocity = Vector3.zero
+            gunDrop.AssemblyAngularVelocity = Vector3.zero
+            gunDrop.CFrame = target
+            gunDrop.CFrame = target
+        else
+            local part = gunDrop:FindFirstChild("Handle")
+                or gunDrop:FindFirstChildWhichIsA("BasePart")
+                or gunDrop.PrimaryPart
+            if part and part:IsA("BasePart") then
+                part.Anchored = false
+                part.CanCollide = false
+                part.AssemblyLinearVelocity = Vector3.zero
+                part.AssemblyAngularVelocity = Vector3.zero
+                part.CFrame = target
+                part.CFrame = target
+            else
+                pcall(function() gunDrop:PivotTo(target) end)
             end
         end
-    end)
+    end
+
+    while attempts < maxAttempts and not hasGun() do
+        local gunDrop = Workspace:FindFirstChild("GunDrop", true)
+        if gunDrop then
+            local ok = pcall(pullDrop, gunDrop)
+            if not ok then
+                pcall(function()
+                    local cf = gunDrop:IsA("BasePart") and gunDrop.CFrame or gunDrop:GetPivot()
+                    root.CFrame = cf
+                    task.wait()
+                    root.CFrame = originalCFrame
+                end)
+            end
+        end
+        if hasGun() then break end
+        task.wait()
+        attempts = attempts + 1
+    end
+
+    if hasGun() and SuccessNotify then
+        notify("GrabGun", "Gun successfully grabbed!")
+    end
+
+    isGrabbing = false
 end
-startAutoGrabLoop()
 
 local function onGunDropDetected(gunDrop)
     if GunNotify then
@@ -2610,8 +2575,6 @@ local espSettings = {
     GunColor = Color3.fromRGB(70, 130, 255),
     NameColor = Color3.fromRGB(255, 255, 255),
     ESP = { Enabled = false, Everyone = false, Murderer = true, Sheriff = true, Innocent = true, Gun = true },
-    Skeleton = { Enabled = false, Everyone = false, Murderer = true, Sheriff = true, Innocent = false, Gun = false },
-    Radar = { Enabled = false, Everyone = false, Murderer = true, Sheriff = true, Innocent = false, Gun = false },
     Outline = { Enabled = false, Everyone = false, Murderer = false, Sheriff = false, Innocent = false, Gun = false },
     Chams = { Enabled = false, Everyone = false, Murderer = true, Sheriff = true, Innocent = true, Gun = true },
     Tracers = { Enabled = false, Everyone = false, Murderer = true, Sheriff = true, Innocent = true, Gun = true },
@@ -2711,7 +2674,6 @@ end
 local function createESP(plr)
     if espObjects[plr] then return end
     local box = {}
-    local skeleton = {}
     if hasDrawing() then
         for i = 1, 4 do
             local line = Drawing.new("Line")
@@ -2720,14 +2682,6 @@ local function createESP(plr)
             line.Thickness = 1
             line.Transparency = 1
             box[i] = line
-        end
-        for i = 1, 12 do
-            local line = Drawing.new("Line")
-            line.Visible = false
-            line.Color = Color3.fromRGB(255, 255, 255)
-            line.Thickness = 1.5
-            line.Transparency = 1
-            skeleton[i] = line
         end
     end
 
@@ -2782,7 +2736,6 @@ local function createESP(plr)
 
     espObjects[plr] = {
         box = box,
-        skeleton = skeleton,
         billboard = billboard,
         nameLabel = nameLabel,
         roleLabel = roleLabel,
@@ -2794,10 +2747,7 @@ end
 local function removeESP(plr)
     local obj = espObjects[plr]
     if not obj then return end
-    for _, line in pairs(obj.box or {}) do
-        pcall(function() line:Remove() end)
-    end
-    for _, line in pairs(obj.skeleton or {}) do
+    for _, line in pairs(obj.box) do
         pcall(function() line:Remove() end)
     end
     if obj.tracer then pcall(function() obj.tracer:Remove() end) end
@@ -3018,105 +2968,6 @@ local function clearAllESP()
     for drop in pairs(gunEspObjects) do
         removeGunESP(drop)
         removeGunHighlight(drop)
-    end
-end
-
-
-local SKELETON_PAIRS = {
-    {"Head", "UpperTorso"}, {"Head", "Torso"},
-    {"UpperTorso", "LowerTorso"}, {"Torso", "HumanoidRootPart"},
-    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
-    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
-    {"Torso", "Left Arm"}, {"Torso", "Right Arm"}, {"Torso", "Left Leg"}, {"Torso", "Right Leg"},
-}
-
-local function drawSkeleton(obj, char, color, visible)
-    local lines = obj and obj.skeleton
-    if not lines then return end
-    if not visible or not char then
-        for i = 1, #lines do
-            if lines[i] then lines[i].Visible = false end
-        end
-        return
-    end
-    local cam = Workspace.CurrentCamera
-    local used = 0
-    for _, pair in ipairs(SKELETON_PAIRS) do
-        if used >= #lines then break end
-        local a = char:FindFirstChild(pair[1])
-        local b = char:FindFirstChild(pair[2])
-        if a and b and a:IsA("BasePart") and b:IsA("BasePart") then
-            local p1, o1 = cam:WorldToViewportPoint(a.Position)
-            local p2, o2 = cam:WorldToViewportPoint(b.Position)
-            if o1 and o2 and p1.Z > 0 and p2.Z > 0 then
-                used = used + 1
-                local line = lines[used]
-                line.From = Vector2.new(p1.X, p1.Y)
-                line.To = Vector2.new(p2.X, p2.Y)
-                line.Color = color
-                line.Visible = true
-            end
-        end
-    end
-    for i = used + 1, #lines do
-        if lines[i] then lines[i].Visible = false end
-    end
-end
-
-local radarDots = {}
-local function ensureRadarDot(plr)
-    if radarDots[plr] then return radarDots[plr] end
-    if not hasDrawing() then return nil end
-    local d = Drawing.new("Circle")
-    d.Filled = true
-    d.Thickness = 1
-    d.NumSides = 12
-    d.Radius = 4
-    d.Visible = false
-    radarDots[plr] = d
-    return d
-end
-local function clearRadar()
-    for plr, d in pairs(radarDots) do
-        pcall(function() d:Remove() end)
-        radarDots[plr] = nil
-    end
-end
-local function updateRadar()
-    local cfg = espSettings.Radar
-    if not cfg or not cfg.Enabled then
-        for _, d in pairs(radarDots) do d.Visible = false end
-        return
-    end
-    local me = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not me then return end
-    local cam = Workspace.CurrentCamera
-    local cx, cy = 90, cam.ViewportSize.Y - 90
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr == LocalPlayer then
-        else
-            local role = getRole(plr)
-            local show = shouldShow("Radar", role)
-            local root = getEspRoot(plr)
-            local dot = ensureRadarDot(plr)
-            if show and root and dot then
-                local offset = root.Position - me.Position
-                local yaw = math.atan2(-cam.CFrame.LookVector.X, -cam.CFrame.LookVector.Z)
-                local rx = offset.X * math.cos(yaw) - offset.Z * math.sin(yaw)
-                local rz = offset.X * math.sin(yaw) + offset.Z * math.cos(yaw)
-                local scale = 0.35
-                local x = cx + math.clamp(rx * scale, -70, 70)
-                local y = cy + math.clamp(rz * scale, -70, 70)
-                local color = getDisplayColor(role)
-                dot.Position = Vector2.new(x, y)
-                dot.Color = color
-                dot.Visible = true
-            elseif dot then
-                dot.Visible = false
-            end
-        end
     end
 end
 
@@ -4516,20 +4367,12 @@ CombatSheriff:Toggle({
     Value = false,
     Callback = function(v)
         AutoGrab = v
-        AutoGrabGun = v
         if v then
             refreshPlayerStatus()
-            if PlayerStatus == "Match" and not hasGun() then
-                task.spawn(function() GrabGun(false) end)
+            if PlayerStatus == "Match" and Workspace:FindFirstChild("GunDrop", true) and not hasGun() then
+                task.spawn(GrabGun)
             end
         end
-    end,
-})
-CombatSheriff:Slider({
-    Title = "Pickup Distance",
-    Value = { Min = 10, Max = 1000, Default = 1000 },
-    Callback = function(v)
-        GrabGunDistance = tonumber(v) or 1000
     end,
 })
 
@@ -4669,18 +4512,6 @@ EspMain:Toggle({
     Title = "Tracers",
     Value = false,
     Callback = function(v) espSettings.Tracers.Enabled = v end,
-})
-
-EspMain:Toggle({
-    Title = "Skeleton ESP",
-    Value = false,
-    Callback = function(v) espSettings.Skeleton.Enabled = v end,
-})
-
-EspMain:Toggle({
-    Title = "Radar ESP",
-    Value = false,
-    Callback = function(v) espSettings.Radar.Enabled = v end,
 })
 
 EspMain:Toggle({
